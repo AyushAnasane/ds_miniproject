@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SomaiyaSat | Mission Control</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">S<span>✦</span></div>
+        <div><strong>SOMAIYASAT</strong><small>MISSION CONTROL</small></div>
+      </div>
+      <div class="side-label">MISSION</div>
+      <button class="nav active" data-section="overview"><span>◈</span> Overview</button>
+      <button class="nav" data-section="telemetry"><span>⌁</span> Telemetry packets</button>
+      <button class="nav" data-section="buffer"><span>▤</span> Packet buffer</button>
+      <button class="nav" data-section="network"><span>⌘</span> Network explorer</button>
+      <button class="nav" data-section="analysis"><span>⌕</span> Data analysis</button>
+      <div class="sidebar-bottom">
+        <div class="connection"><i></i><div><b>Simulation online</b><small>Local mission environment</small></div></div>
+        <div class="mission-id">MISSION ID <strong>KJS-SRS-01</strong></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div><div class="eyebrow">POCKETQUBE · SOMAIYASAT & SOMAIYAPOD</div><h1 id="pageTitle">Mission overview</h1></div>
+        <div class="top-right"><span class="sim-pill"><i></i> SIMULATED TELEMETRY</span><div class="avatar">SV</div></div>
+      </header>
+
+      <section id="overview" class="section active-section">
+        <div class="welcome">
+          <div><div class="eyebrow light">MISSION STATUS / 001</div><h2>Good evening, Operator.</h2><p>Monitor telemetry, manage packet flow, and explore the SomaiyaSat communication network.</p></div>
+          <div class="orbit-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="planet"></div><div class="satellite">✦</div></div>
+        </div>
+        <div class="metrics">
+          <article class="metric"><div class="metric-head">BATTERY LEVEL <span class="metric-icon green">ϟ</span></div><div class="metric-value" id="battery">87<span>%</span></div><div class="meter"><i style="width:87%"></i></div><small class="positive">Nominal power state</small></article>
+          <article class="metric"><div class="metric-head">LINK QUALITY <span class="metric-icon amber">⌁</span></div><div class="metric-value word">GOOD</div><div class="link-bars"><i></i><i></i><i></i><i class="dim"></i><i class="dim"></i></div><small>Ground link available (simulated)</small></article>
+          <article class="metric"><div class="metric-head">REGISTERED PACKETS <span class="metric-icon cream">▤</span></div><div class="metric-value" id="packetCount">04</div><small>Telemetry packet registry</small></article>
+          <article class="metric"><div class="metric-head">BUFFER OCCUPANCY <span class="metric-icon amber">▦</span></div><div class="metric-value"><span id="queueCount">00</span><span class="muted"> / 10</span></div><div class="meter amber-meter"><i id="queueMeter" style="width:0%"></i></div><small>Fixed-capacity circular queue</small></article>
+        </div>
+        <div class="content-grid">
+          <article class="panel large-panel"><div class="panel-heading"><div><div class="eyebrow">LIVE FEED</div><h3>Recent telemetry</h3></div><button class="text-button" data-go="telemetry">View all ↗</button></div><div id="recentPackets" class="table-wrap"></div></article>
+          <article class="panel"><div class="panel-heading"><div><div class="eyebrow">MISSION CHECKS</div><h3>System health</h3></div><span class="health-dot"></span></div><div class="health-list"><div><span>Deployment confirmation</span><b class="status-good">CONFIRMED</b></div><div><span>TT&C subsystem</span><b class="status-good">NOMINAL</b></div><div><span>Radio payload stack</span><b class="status-warn">SIMULATED</b></div><div><span>Ground station</span><b class="status-good">AVAILABLE</b></div></div><div class="notice">This is an educational simulation. No live satellite connection is present.</div></article>
+        </div>
+        <div class="panel activity-panel"><div class="panel-heading"><div><div class="eyebrow">DATA STRUCTURES</div><h3>Mission modules</h3></div></div><div class="module-grid">
+          <button class="module" data-go="telemetry"><span class="module-symbol">▤</span><b>Arrays & Structures</b><small>Register and search packets</small></button>
+          <button class="module" data-go="buffer"><span class="module-symbol">⇄</span><b>Queue & Stack</b><small>Buffer and command history</small></button>
+          <button class="module" data-go="network"><span class="module-symbol">⌘</span><b>Graph traversal</b><small>Explore connected nodes</small></button>
+          <button class="module" data-go="analysis"><span class="module-symbol">⌕</span><b>Search & Hashing</b><small>Find mission records</small></button>
+        </div></div>
+      </section>
+
+      <section id="telemetry" class="section">
+        <div class="section-intro"><div><div class="eyebrow">MODULE 01 / ARRAYS + STRUCTURES + LINKED LIST</div><h2>Telemetry packets</h2><p>Register packet records and retrieve them by Packet ID.</p></div><button class="primary" id="showAdd">＋ Register packet</button></div>
+        <article class="panel form-panel" id="addForm" hidden><div class="panel-heading"><h3>Register new packet</h3><button class="icon-button" id="hideAdd">✕</button></div><form id="packetForm" class="form-grid"><label>Packet ID<input type="number" min="1" id="packetId" required placeholder="e.g. 105"></label><label>Timestamp<input type="number" id="packetTimestamp" required></label><label>Payload priority<select id="packetPriority"><option value="1">1 — TT&C / housekeeping</option><option value="2">2 — SSTV image</option><option value="3">3 — M17 / Codec2 voice-data</option></select></label><button class="primary form-submit" type="submit">Save packet</button></form></article>
+        <article class="panel"><div class="panel-heading"><div><div class="eyebrow">PACKET REGISTRY</div><h3>All telemetry records</h3></div><div class="searchbox"><input id="packetSearch" placeholder="Search Packet ID…"><button id="searchPacket">Search</button></div></div><div id="packetTable" class="table-wrap"></div><div id="packetNotice" class="notice" hidden></div></article>
+        <article class="panel"><div class="panel-heading"><div><div class="eyebrow">LINKED-LIST CONCEPT</div><h3>Recent packet history</h3></div></div><div id="historyList" class="history-list"></div></article>
+      </section>
+
+      <section id="buffer" class="section">
+        <div class="section-intro"><div><div class="eyebrow">MODULE 02 / CIRCULAR QUEUE + STACK</div><h2>Packet buffer</h2><p>Queue packets before simulated transmission. First in, first out.</p></div></div>
+        <div class="metrics two-metrics"><article class="metric"><div class="metric-head">BUFFER CAPACITY</div><div class="metric-value">10</div><small>Fixed-size circular queue</small></article><article class="metric"><div class="metric-head">CURRENTLY QUEUED</div><div class="metric-value" id="bufferMetric">00</div><small>Pending simulated transmission</small></article></div>
+        <article class="panel"><div class="panel-heading"><div><div class="eyebrow">FIFO BUFFER</div><h3>Transmission queue</h3></div><span class="capacity-pill" id="capacityPill">0 / 10 slots</span></div><div id="queueVisual" class="queue-visual"></div><div class="actions"><label>Packet ID<select id="queuePacket"></select></label><button class="primary" id="enqueue">＋ Add to buffer</button><button class="secondary" id="transmit">Transmit next →</button></div><div id="queueNotice" class="notice" hidden></div></article>
+        <article class="panel"><div class="panel-heading"><div><div class="eyebrow">LIFO COMMAND LOG</div><h3>Recent operations</h3></div></div><div id="commandList" class="history-list"></div></article>
+      </section>
+
+      <section id="network" class="section">
+        <div class="section-intro"><div><div class="eyebrow">MODULE 03 / GRAPH</div><h2>Network explorer</h2><p>Explore the simulated satellite and ground-station connections using BFS or DFS.</p></div></div>
+        <article class="panel network-panel"><div class="panel-heading"><div><div class="eyebrow">COMMUNICATION TOPOLOGY</div><h3>Connected network nodes</h3></div><span class="status-warn">SIMULATED</span></div>
+          <div class="network-map"><svg viewBox="0 0 700 330" role="img" aria-label="Simulated satellite and ground station network"><g class="edges"><line x1="350" y1="62" x2="150" y2="150"/><line x1="350" y1="62" x2="550" y2="150"/><line x1="150" y1="150" x2="250" y2="260"/><line x1="550" y1="150" x2="250" y2="260"/><line x1="550" y1="150" x2="450" y2="260"/><line x1="250" y1="260" x2="450" y2="260"/></g><g class="node satellite-node" transform="translate(350 62)"><circle r="39"/><text y="5" text-anchor="middle">SAT</text><text y="56" class="node-label" text-anchor="middle">SomaiyaSat</text></g><g class="node" transform="translate(150 150)"><circle r="31"/><text y="4" text-anchor="middle">GS</text><text y="48" class="node-label" text-anchor="middle">GS-West</text></g><g class="node" transform="translate(550 150)"><circle r="31"/><text y="4" text-anchor="middle">GS</text><text y="48" class="node-label" text-anchor="middle">GS-East</text></g><g class="node relay-node" transform="translate(250 260)"><circle r="28"/><text y="4" text-anchor="middle">R1</text><text y="44" class="node-label" text-anchor="middle">Relay-1</text></g><g class="node relay-node" transform="translate(450 260)"><circle r="28"/><text y="4" text-anchor="middle">R2</text><text y="44" class="node-label" text-anchor="middle">Relay-2</text></g></svg></div>
+          <div class="actions"><button class="primary" id="runBfs">Run BFS traversal</button><button class="secondary" id="runDfs">Run DFS traversal</button></div><div id="traversalResult" class="result-box">Select BFS or DFS to explore nodes reachable from SomaiyaSat.</div></article>
+        <article class="panel"><div class="panel-heading"><div><div class="eyebrow">MISSION EVENTS</div><h3>Binary search tree concept</h3></div></div><form id="eventForm" class="inline-form"><input id="eventId" type="number" placeholder="Event ID (e.g. 205)" required><button class="primary">Add event</button></form><div id="eventList" class="event-list"></div><p class="footnote">Event IDs are displayed in sorted order to illustrate ordered retrieval.</p></article>
+      </section>
+
+      <section id="analysis" class="section">
+        <div class="section-intro"><div><div class="eyebrow">MODULE 04 / SORTING + BINARY SEARCH + HASHING</div><h2>Mission report</h2><p>Mission statistics, packet distribution, and chronological activity summary.</p></div></div>
+        <div class="report-meta"><span><b>MISSION:</b> KJS-SRS-01</span><span><b>PLATFORM:</b> SomaiyaSat & SomaiyaPod</span><span><b>REPORT TYPE:</b> Simulated telemetry</span><span><b>STATUS:</b> <i>Educational demo</i></span></div>
+        <div class="metrics report-metrics">
+          <article class="metric"><div class="metric-head">TOTAL PACKETS</div><div class="metric-value" id="reportTotal">—</div><small>Records in registry</small></article>
+          <article class="metric"><div class="metric-head">TT&C / HOUSEKEEPING</div><div class="metric-value" id="reportCritical">—</div><small>Priority 1 · highest priority</small></article>
+          <article class="metric"><div class="metric-head">SSTV IMAGES</div><div class="metric-value" id="reportImages">—</div><small>Priority 2 · image payload</small></article>
+          <article class="metric"><div class="metric-head">M17 / CODEC2</div><div class="metric-value" id="reportVoice">—</div><small>Priority 3 · voice/data</small></article>
+        </div>
+        <div class="report-grid">
+          <article class="panel"><div class="panel-heading"><div><div class="eyebrow">PAYLOAD COMPOSITION</div><h3>Packets by payload type</h3></div></div><div id="payloadChart" class="bar-chart"></div></article>
+          <article class="panel"><div class="panel-heading"><div><div class="eyebrow">PRIORITY POLICY</div><h3>Mission routing priorities</h3></div></div><div class="priority-report"><div><span class="priority-number">01</span><div><b>TT&C / Housekeeping</b><small>Command, control, and essential telemetry</small></div><strong>Highest</strong></div><div><span class="priority-number">02</span><div><b>SSTV image payloads</b><small>Images routed after essential telemetry</small></div><strong>Medium</strong></div><div><span class="priority-number">03</span><div><b>M17 / Codec2</b><small>Voice and data when resources permit</small></div><strong>Standard</strong></div></div></article>
+        </div>
+        <article class="panel"><div class="panel-heading"><div><div class="eyebrow">TIMESTAMP DISTRIBUTION</div><h3>Packet activity timeline</h3></div><span class="report-note">Based on registered packet timestamps</span></div><div id="timelineChart" class="timeline-chart"></div></article>
+        <article class="panel scheduler-panel"><div class="panel-heading"><div><div class="eyebrow">USE-CASE SOLVER / PRIORITY SCHEDULER</div><h3>Autonomous packet-routing decision</h3></div><span class="status-good">RULE-BASED DEMO</span></div><p class="footnote">Test the mission constraint: conserve power below 30%, defer weak links below 50%, otherwise select the highest-priority pending packet.</p><form id="schedulerForm" class="scheduler-controls"><label>Battery level (%)<input id="schedulerBattery" type="number" min="0" max="100" value="87" required></label><label>Link quality (%)<input id="schedulerLink" type="number" min="0" max="100" value="82" required></label><button class="primary" type="submit">Run routing algorithm</button></form><div id="schedulerResult" class="result-box">Run the scheduler to see the selected packet, constraints, and priority ordering.</div></article>
+        <article class="panel"><div class="panel-heading"><div><div class="eyebrow">TIMESTAMP ORDERING</div><h3>Chronological packet records</h3></div><button class="primary" id="sortPackets">Sort by timestamp</button></div><div id="sortedTable" class="table-wrap"></div></article>
+        <article class="panel"><div class="panel-heading"><div><div class="eyebrow">BINARY SEARCH</div><h3>Find timestamp</h3></div></div><form id="timestampForm" class="inline-form"><input id="timestampSearch" type="number" placeholder="Enter exact timestamp" required><button class="primary">Search timestamp</button></form><div id="timestampResult" class="result-box">Sort records, then search for a timestamp.</div></article>
+        <article class="panel"><div class="panel-heading"><div><div class="eyebrow">HASH TABLE</div><h3>Packet ID lookup</h3></div></div><form id="hashForm" class="inline-form"><input id="hashId" type="number" placeholder="Enter Packet ID" required><button class="primary">Look up ID</button></form><div id="hashResult" class="result-box">Hash bucket = Packet ID modulo 11 (for this demonstration).</div></article>
+      </section>
+      <footer>SomaiyaSat & SomaiyaPod · KJS-SRS-01 · Educational simulation only</footer>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
