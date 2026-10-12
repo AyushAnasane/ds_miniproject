@@ -19,6 +19,7 @@
       <button class="nav" data-section="buffer"><span>▤</span> Packet buffer</button>
       <button class="nav" data-section="network"><span>⌘</span> Network explorer</button>
       <button class="nav" data-section="analysis"><span>⌕</span> Data analysis</button>
+      <button class="nav" data-section="pass"><span>▶</span> Ground-pass simulator</button>
       <div class="sidebar-bottom">
         <div class="connection"><i></i><div><b>Simulation online</b><small>Local mission environment</small></div></div>
         <div class="mission-id">MISSION ID <strong>KJS-SRS-01</strong></div>
@@ -37,7 +38,7 @@
           <div class="orbit-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="planet"></div><div class="satellite">✦</div></div>
         </div>
         <div class="metrics">
-          <article class="metric"><div class="metric-head">BATTERY LEVEL <span class="metric-icon green">ϟ</span></div><div class="metric-value" id="battery">87<span>%</span></div><div class="meter"><i style="width:87%"></i></div><small class="positive">Nominal power state</small></article>
+          <article class="metric"><div class="metric-head">BATTERY LEVEL <span class="metric-icon green">ϟ</span></div><div class="metric-value" id="battery">87<span>%</span></div><div class="meter"><i id="batteryMeter" style="width:87%"></i></div><small class="positive" id="batteryState">Nominal power state · simulation idle</small></article>
           <article class="metric"><div class="metric-head">LINK QUALITY <span class="metric-icon amber">⌁</span></div><div class="metric-value word">GOOD</div><div class="link-bars"><i></i><i></i><i></i><i class="dim"></i><i class="dim"></i></div><small>Ground link available (simulated)</small></article>
           <article class="metric"><div class="metric-head">REGISTERED PACKETS <span class="metric-icon cream">▤</span></div><div class="metric-value" id="packetCount">04</div><small>Telemetry packet registry</small></article>
           <article class="metric"><div class="metric-head">BUFFER OCCUPANCY <span class="metric-icon amber">▦</span></div><div class="metric-value"><span id="queueCount">00</span><span class="muted"> / 10</span></div><div class="meter amber-meter"><i id="queueMeter" style="width:0%"></i></div><small>Fixed-capacity circular queue</small></article>
@@ -94,6 +95,33 @@
         <article class="panel"><div class="panel-heading"><div><div class="eyebrow">TIMESTAMP ORDERING</div><h3>Chronological packet records</h3></div><button class="primary" id="sortPackets">Sort by timestamp</button></div><div id="sortedTable" class="table-wrap"></div></article>
         <article class="panel"><div class="panel-heading"><div><div class="eyebrow">BINARY SEARCH</div><h3>Find timestamp</h3></div></div><form id="timestampForm" class="inline-form"><input id="timestampSearch" type="number" placeholder="Enter exact timestamp" required><button class="primary">Search timestamp</button></form><div id="timestampResult" class="result-box">Sort records, then search for a timestamp.</div></article>
         <article class="panel"><div class="panel-heading"><div><div class="eyebrow">HASH TABLE</div><h3>Packet ID lookup</h3></div></div><form id="hashForm" class="inline-form"><input id="hashId" type="number" placeholder="Enter Packet ID" required><button class="primary">Look up ID</button></form><div id="hashResult" class="result-box">Hash bucket = Packet ID modulo 11 (for this demonstration).</div></article>
+      </section>
+      <section id="pass" class="section">
+        <div class="section-intro"><div><div class="eyebrow">MISSION SIMULATION / PACKET SCHEDULING</div><h2>Ground-pass simulator</h2><p>Configure a satellite pass and watch priority-based packet delivery under time, power, and link constraints.</p></div><span class="status-good">DETERMINISTIC DEMO</span></div>
+        <div class="pass-presets">
+          <button class="preset-card" data-preset="easy"><b>Easy pass</b><strong>20 packets · 180 s</strong><small>Power 300 · Good link</small></button>
+          <button class="preset-card" data-preset="busy"><b>Busy pass</b><strong>80 packets · 90 s</strong><small>Power 150 · Medium link</small></button>
+          <button class="preset-card" data-preset="worst"><b>Worst case</b><strong>100 packets · 20 s</strong><small>Power 5 · Poor link</small></button>
+        </div>
+        <article class="panel"><div class="panel-heading"><div><div class="eyebrow">PASS CONFIGURATION</div><h3>Mission constraints</h3></div><span class="capacity-pill">KJS-SRS-01</span></div>
+          <form id="passForm" class="pass-controls">
+            <label>Packets <input id="passPackets" type="number" min="1" max="100" value="20" required></label>
+            <label>Pass time (seconds) <input id="passTime" type="number" min="1" max="600" value="180" required></label>
+            <label>Power budget <input id="passPower" type="number" min="0" max="1000" value="300" required></label>
+            <label>Link quality <select id="passLink"><option value="good">Good · 100%</option><option value="medium">Medium · 60%</option><option value="poor">Poor · 20%</option></select></label>
+            <label>Target station <select id="passStation"><option>GS-East</option><option>GS-West</option><option>Relay-1</option><option>Relay-2</option></select></label>
+            <label>Node down <select id="passDown"><option value="none">None</option><option>GS-East</option><option>GS-West</option><option>Relay-1</option><option>Relay-2</option></select></label>
+            <button class="primary pass-run" type="submit">Run pass</button>
+          </form>
+          <div class="pass-stats" id="passStats"><div><small>Sent</small><b>—</b></div><div><small>Dropped</small><b>—</b></div><div><small>Waiting</small><b>—</b></div><div><small>Power used</small><b>—</b></div></div>
+        </article>
+        <article class="panel"><div class="panel-heading"><div><div class="eyebrow">PACKET DELIVERY TIMELINE</div><h3>Watch the pass</h3></div><div class="pass-playback"><button class="secondary" id="passSlow">Slow</button><button class="secondary" id="passNormal">Normal</button><button class="secondary" id="passFast">Fast</button><button class="secondary" id="passPause">Pause</button><button class="secondary" id="passResume">Resume</button><button class="secondary" id="passReset">Reset</button></div></div>
+          <p class="footnote">Each tile represents one packet. Press Run pass to play the scheduled packets in sequence. Battery level decreases as transmitted packets consume simulated energy; Pause and Resume control playback.</p>
+          <div id="passPacketGrid" class="pass-packet-grid"><div class="empty-chart">Choose a preset or run a pass to generate packets.</div></div>
+          <div class="pass-legend"><span><i class="sent"></i> Sent</span><span><i class="dropped"></i> Dropped / deferred</span><span><i class="waiting"></i> Waiting</span></div>
+          <div id="passDecision" class="result-box">The pass report will appear here.</div>
+        </article>
+        <article class="panel"><div class="panel-heading"><div><div class="eyebrow">EVENT LOG</div><h3>Scheduler decisions</h3></div></div><div id="passLog" class="pass-log"><div class="notice">No pass has been run yet.</div></div></article>
       </section>
       <footer>SomaiyaSat & SomaiyaPod · KJS-SRS-01 · Educational simulation only</footer>
     </main>

@@ -75,7 +75,7 @@ async function refreshAll() {
 function showSection(id) {
   document.querySelectorAll(".section").forEach(s => s.classList.toggle("active-section", s.id === id));
   document.querySelectorAll(".nav").forEach(n => n.classList.toggle("active", n.dataset.section === id));
-  const titles = { overview:"Mission overview", telemetry:"Telemetry packets", buffer:"Packet buffer", network:"Network explorer", analysis:"Data analysis" };
+  const titles = { overview:"Mission overview", telemetry:"Telemetry packets", buffer:"Packet buffer", network:"Network explorer", analysis:"Data analysis", pass:"Ground-pass simulator" };
   $("pageTitle").textContent = titles[id] || "Mission overview";
   if (id === "telemetry") { refreshPackets(); refreshHistory(); }
   if (id === "buffer") { refreshQueue(); refreshHistory(); }
@@ -150,3 +150,110 @@ $("hashForm").addEventListener("submit", async e => {
   } catch(err) { $("hashResult").textContent = err.message; }
 });
 refreshAll();
+
+// Ground-pass simulator: deterministic, rule-based demonstration with real-time playback.
+let passRun = null;
+let passSpeed = 1;
+let passTimer = null;
+let simulatedBattery = 87;
+function updateBattery(value, state) {
+  simulatedBattery = Math.max(0, Math.min(100, value));
+  $('battery').innerHTML = `${Math.round(simulatedBattery)}<span>%</span>`;
+  $('batteryMeter').style.width = `${simulatedBattery}%`;
+  $('batteryState').textContent = state || (simulatedBattery < 30 ? 'Power conservation mode' : 'Nominal power state');
+  $('batteryState').className = simulatedBattery < 30 ? 'status-warn' : 'positive';
+  $('batteryMeter').style.background = simulatedBattery < 30 ? '#c96b58' : '';
+}
+function stopPassTimer() { if (passTimer) clearTimeout(passTimer); passTimer = null; }
+function passPreset(name) {
+  const presets = {
+    easy: { packets: 20, time: 180, power: 300, link: 'good' },
+    busy: { packets: 80, time: 90, power: 150, link: 'medium' },
+    worst: { packets: 100, time: 20, power: 5, link: 'poor' }
+  };
+  const p = presets[name]; if (!p) return;
+  $('passPackets').value = p.packets; $('passTime').value = p.time; $('passPower').value = p.power; $('passLink').value = p.link;
+  document.querySelectorAll('.preset-card').forEach(b => b.classList.toggle('selected', b.dataset.preset === name));
+}
+function simulatePass(config) {
+  const linkPct = { good: 1, medium: .6, poor: .2 }[config.link];
+  const capacity = Math.max(0, Math.floor(config.time * 1.2 * linkPct));
+  const generated = Array.from({length: config.packets}, (_, i) => {
+    const roll = (i * 37 + config.packets * 13 + config.time) % 10;
+    const type = roll < 3 ? 'TT&C' : roll < 6 ? 'SSTV' : 'M17 / Codec2';
+    return { id: 1001 + i, type, priority: type === 'TT&C' ? 1 : type === 'SSTV' ? 2 : 3, energy: type === 'TT&C' ? 1 : type === 'SSTV' ? 4 : 2, status: 'Waiting' };
+  });
+  const ordered = [...generated].sort((a,b) => a.priority - b.priority || a.id - b.id);
+  let usedPower = 0, sent = 0;
+  const log = [`Ground pass opened: ${config.time}s window, ${config.power} energy units, ${config.link} link (${Math.round(linkPct*100)}%).`, `Estimated link capacity: ${capacity} packets.`, 'Playback started. Packets will be processed in priority order.'];
+  const schedule = ordered.map((packet, index) => {
+    let status = 'Waiting';
+    if (index >= capacity) status = 'Waiting';
+    else if (usedPower + packet.energy > config.power) status = 'Dropped';
+    else { status = 'Sent'; usedPower += packet.energy; sent++; }
+    return {...packet, plannedStatus: status};
+  });
+  return { packets: generated.map(p => ({...p, status:'Queued'})), schedule, cursor:0, sent:0, dropped:0, waiting:0, usedPower:0, plannedPower:usedPower, capacity, log, config, paused:false, complete:false, batteryStart:87 };
+}
+function renderPass() {
+  if (!passRun) return;
+  $('passStats').innerHTML = `<div><small>Sent</small><b>${passRun.sent}</b></div><div><small>Dropped / deferred</small><b>${passRun.dropped}</b></div><div><small>Waiting</small><b>${passRun.waiting}</b></div><div><small>Power used</small><b>${passRun.usedPower}/${passRun.config.power}</b></div>`;
+  $('passPacketGrid').innerHTML = passRun.packets.map(p => `<button class="pass-packet ${p.status.toLowerCase().replace(/[^a-z]/g,'')} ${p.type === 'TT&C' ? 'ttc' : p.type === 'SSTV' ? 'sstv' : 'voice'}" title="Packet #${p.id} · ${esc(p.type)} · ${p.status}" data-pass-packet="${p.id}">#${p.id}</button>`).join('');
+  $('passLog').innerHTML = passRun.log.slice(-80).map((line,i) => `<div class="history-item"><span class="history-id">${String(i+1).padStart(2,'0')}</span><span>${esc(line)}</span></div>`).join('');
+  const state = passRun.complete ? 'Pass complete' : passRun.paused ? 'Playback paused' : 'Playback running';
+  $('passDecision').innerHTML = `<b>${state}</b><p>${passRun.sent} packets transmitted so far. TT&amp;C is prioritised before SSTV, then M17 / Codec2, subject to link capacity and available power.</p><small class="scheduler-note">Battery and packet statuses update during playback. This is an educational simulation, not a live satellite link.</small>`;
+}
+function finishPass() {
+  if (!passRun) return;
+  passRun.complete = true; passRun.paused = false; stopPassTimer();
+  passRun.log.push(`Pass complete: ${passRun.sent} sent, ${passRun.dropped} power-limited, ${passRun.waiting} waiting. Power used ${passRun.usedPower}/${passRun.config.power}. Battery ${Math.round(simulatedBattery)}%.`);
+  renderPass(); updateBattery(simulatedBattery, simulatedBattery < 30 ? 'Power conservation mode · pass complete' : 'Pass complete · simulated energy consumed');
+  toast('Ground pass playback complete.');
+}
+function passTick() {
+  if (!passRun || passRun.paused || passRun.complete) return;
+  if (passRun.cursor >= passRun.schedule.length) return finishPass();
+  const planned = passRun.schedule[passRun.cursor++];
+  const packet = passRun.packets.find(p => p.id === planned.id);
+  if (packet) {
+    packet.status = planned.plannedStatus;
+    if (packet.status === 'Sent') {
+      passRun.sent++;
+      passRun.usedPower += packet.energy;
+      // Each transmitted packet consumes a visible amount of simulated battery.
+      const drain = packet.energy * 0.55;
+      updateBattery(simulatedBattery - drain, simulatedBattery - drain < 30 ? 'Power conservation mode · ordinary packets may be deferred' : `-${drain.toFixed(2)}% simulated energy · transmitting`);
+      passRun.log.push(`TX packet #${packet.id} · ${packet.type} · priority ${packet.priority} · energy ${packet.energy} · battery ${Math.round(simulatedBattery)}%.`);
+    } else if (packet.status === 'Dropped') {
+      passRun.dropped++;
+      passRun.log.push(`DEFER packet #${packet.id} · ${packet.type} · power budget would be exceeded.`);
+    } else {
+      passRun.waiting++;
+      passRun.log.push(`WAIT packet #${packet.id} · ${packet.type} · pass capacity reached.`);
+    }
+  }
+  renderPass();
+  if (passRun.cursor >= passRun.schedule.length) finishPass();
+  else passTimer = setTimeout(passTick, Math.max(180, 700 / passSpeed));
+}
+document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => passPreset(b.dataset.preset)));
+$('passForm').addEventListener('submit', e => {
+  e.preventDefault(); stopPassTimer();
+  const config = { packets: Number($('passPackets').value), time: Number($('passTime').value), power: Number($('passPower').value), link: $('passLink').value };
+  if (config.packets < 1 || config.packets > 100 || config.time < 1 || config.power < 0) return toast('Check the pass values and try again.');
+  simulatedBattery = 87; updateBattery(87, 'Pass started · battery at 87%');
+  passRun = simulatePass(config); renderPass(); toast('Ground pass started. Watch the battery and packet tiles update.');
+  passTimer = setTimeout(passTick, Math.max(180, 700 / passSpeed));
+});
+$('passSlow').addEventListener('click', () => { passSpeed = .5; toast('Playback speed: slow'); });
+$('passNormal').addEventListener('click', () => { passSpeed = 1; toast('Playback speed: normal'); });
+$('passFast').addEventListener('click', () => { passSpeed = 2; toast('Playback speed: fast'); });
+$('passPause').addEventListener('click', () => { if (!passRun || passRun.complete) return; passRun.paused = true; stopPassTimer(); renderPass(); updateBattery(simulatedBattery, 'Playback paused · battery stable'); toast('Pass paused.'); });
+$('passResume').addEventListener('click', () => { if (!passRun || passRun.complete || !passRun.paused) return; passRun.paused = false; renderPass(); toast('Pass resumed.'); passTimer = setTimeout(passTick, Math.max(180, 700 / passSpeed)); });
+$('passReset').addEventListener('click', () => {
+  stopPassTimer(); passRun = null; updateBattery(87, 'Nominal power state · simulation reset');
+  $('passStats').innerHTML = '<div><small>Sent</small><b>—</b></div><div><small>Dropped / deferred</small><b>—</b></div><div><small>Waiting</small><b>—</b></div><div><small>Power used</small><b>—</b></div>';
+  $('passPacketGrid').innerHTML = '<div class="empty-chart">Choose a preset or run a pass to generate packets.</div>';
+  $('passLog').innerHTML = '<div class="notice">No pass has been run yet.</div>'; $('passDecision').textContent = 'The pass report will appear here.';
+});
+$('passPacketGrid').addEventListener('click', e => { const b = e.target.closest('[data-pass-packet]'); if (!b || !passRun) return; const p = passRun.packets.find(x => x.id === Number(b.dataset.passPacket)); if (p) $('passDecision').innerHTML = `<b>Packet #${p.id}</b><p>Payload: ${esc(p.type)} · Priority: ${p.priority} · Energy cost: ${p.energy} · Status: <b>${esc(p.status)}</b></p>`; });
